@@ -1,0 +1,20 @@
+#BlueJ class context
+comment0.params=game\ iAmRed
+comment0.target=TestingAgent(Connect4Game,\ boolean)
+comment1.params=
+comment1.target=void\ move()
+comment2.params=
+comment2.target=int\ randomMove()
+comment3.params=i
+comment3.target=void\ moveOnColumn(int)
+comment4.params=column
+comment4.target=Connect4Slot\ getTopEmptySlot(Connect4Column)
+comment5.params=red
+comment5.target=int\ canWin(boolean)
+comment6.params=isRed\ slot1\ slot2\ slot3
+comment6.target=boolean\ checkIfEqual(boolean,\ Connect4Slot,\ Connect4Slot,\ Connect4Slot)
+comment7.params=column
+comment7.target=int\ getTopEmptyIndex(Connect4Column)
+comment8.params=
+comment8.target=java.lang.String\ getName()
+numComments=9
