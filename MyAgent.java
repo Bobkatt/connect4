@@ -3,7 +3,8 @@ import java.util.Random;
 public class MyAgent extends Agent
 {
     Random r;
-
+    private static final int SLOTS_TO_CHECK = 3;
+    
     /**
      * Constructs a new agent, giving it the game and telling it whether it is Red or Yellow.
      * 
@@ -50,7 +51,7 @@ public class MyAgent extends Agent
         }
         else//no stratigic moves, choose random slot
         {
-            nextMove = randomMove();
+            nextMove = randomMove();//check position of random move, could this lead to op winning?
         }
         moveOnColumn(nextMove);
     }
@@ -116,18 +117,17 @@ public class MyAgent extends Agent
     /**
      * compare adjacent slots based on direction and number of slots to check
      * 
-     * @param isRed boolean is the matching colour red?
-     * @param startCol int starting column for 1st slot
-     * @param startRow int starting row for 1st slot
-     * @param numberSlots int number of adjacent slots to compare
-     * @direction String which directio to check
-     * @return true if all match isRed otherwise will return false
+     * @param checkColour boolean is the colour?
+     * @param slot1 Connect4Slot - 1st slot to compare for match
+     * @param slot2 Connect4Slot - 2nd slot to compare for match
+     * @param slot3 Connect4Slot - 3rd slot to compare for match
+     * @return true if all match checkColour otherwise will return false
      */
-    public boolean checkForMatch(boolean bolRed, Connect4Slot slot1, Connect4Slot slot2, Connect4Slot slot3)
+    public boolean allThreeMatch(boolean checkColour, Connect4Slot slot1, Connect4Slot slot2, Connect4Slot slot3)
     {
-        if(slot1.getIsFilled() && slot2.getIsFilled() && slot3.getIsFilled()) 
+        if(slot1.getIsFilled() && slot2.getIsFilled() && slot3.getIsFilled())//check to see if all 3 slots are currently occupied 
         {
-            if(slot1.getIsRed()==bolRed && slot2.getIsRed()==bolRed && slot3.getIsRed()==bolRed) 
+            if(slot1.getIsRed()==checkColour && slot2.getIsRed()==checkColour && slot3.getIsRed()==checkColour)//compare each selected slot with selected colout for match 
             {
                 return true;
             }
@@ -136,132 +136,106 @@ public class MyAgent extends Agent
     }
     
     /**
+     * check posilbilites from selected slot to determine if there is a winning combination
+     * 
+     * @param checkColour boolean used to pass to allThreeMatch routine at end for comparision
+     * @param startCol int column of selected slot
+     * @param startRow int row of selected slot
+     * @param direction String which direction to check for winning combination
+     * @return true if winning combination is found otherwise will return false
+     */
+    public boolean getSlotsToCheck(boolean checkColour, int startColumn, int startRow, String direction)
+    {
+        int gridRows = myGame.getRowCount();
+        int gridColumns = myGame.getColumnCount();
+        boolean isAWinner = false;
+        int positionCounter = 0;
+        while(positionCounter < (SLOTS_TO_CHECK + 1) && !isAWinner)//loop for all possible positions either side of the selected slot
+        {
+            boolean okToCheck = true;
+            int [][] slotPairs={{0,0}, {0,0}, {0,0}};//array for slot positions to be checked
+            int startLocation = -SLOTS_TO_CHECK;
+            while (startLocation < 0 && okToCheck)
+            {
+                int offset = startLocation + positionCounter;
+                if (offset > -1)//skip startSlot Position
+                {
+                    offset += 1;
+                }
+                int checkColumn = 0;
+                int checkRow = 0;
+                switch(direction)//based on direction, get next slot position
+                {
+                    case "Diagonal Left"://alter row and column
+                        checkColumn = startColumn + offset;
+                        checkRow = startRow - offset;
+                        break;
+                    case "Diagonal Right"://alter row and column
+                        checkColumn = startColumn + offset;
+                        checkRow = startRow + offset;
+                        break;
+                    case "Horizontal"://alter column only
+                        checkColumn = startColumn + offset;
+                        checkRow = startRow;
+                        break;
+                    case "Vertical"://alter row only
+                        checkColumn = startColumn;
+                        checkRow = startRow + offset;
+                        break;
+                }   
+                if(checkRow >= 0 && checkRow < gridRows && checkColumn >= 0 && checkColumn  < gridColumns)//is slot position within bounds of the board
+                {
+                    slotPairs[startLocation + SLOTS_TO_CHECK][0]= checkColumn;
+                    slotPairs[startLocation + SLOTS_TO_CHECK][1]= checkRow;
+                }
+                else
+                {
+                    okToCheck = false;//if outside bounds of board, not worth checking
+                }
+                startLocation++;
+            }
+            if(okToCheck && !isAWinner)
+            {
+                isAWinner = allThreeMatch(checkColour, myGame.getColumn(slotPairs[0][0]).getSlot(slotPairs[0][1]), myGame.getColumn(slotPairs[1][0]).getSlot(slotPairs[1][1]), myGame.getColumn(slotPairs[2][0]).getSlot(slotPairs[2][1]));
+            }
+            positionCounter++;
+        }
+        return isAWinner;
+    }
+    
+    /**
      * Check for the best move available
      * Finds next available slot in each row
      * Scans adjacent slots for matching colours and returns column ID if finds winning solution
      * 
-     * @param isRed boolean is the matching colour red?
+     * @param playerRed boolean is the matching colour red?
      * @return column id for next move, -1 if none found
      */
-    public int getNextMove(boolean bolRed)
+    public int getNextMove(boolean playerRed)
     {
-        int gridRows = myGame.getRowCount();
-        int gridColumns = myGame.getColumnCount();
         for(int i = 0; i < myGame.getColumnCount(); i++) 
         {
             Connect4Column column = myGame.getColumn(i);
             if (!column.getIsFull())//check if column is not yet full
             {
-                int rowId = getLowestEmptyIndex(column);//get next move on current column
-                if (rowId >= 0)
+                int nextSlot = getLowestEmptyIndex(column);//get next move on current column
+                if (nextSlot >= 0)
                 {
-                    //vertical (only below row)
-                    //is there 3 rows below?
-                    if(rowId < gridRows -3)
+                    if(getSlotsToCheck(playerRed, i, nextSlot, "Vertical"))//check for winning move on vertical axis 
                     {
-                        if(checkForMatch(bolRed, myGame.getColumn(i).getSlot(rowId + 1), myGame.getColumn(i).getSlot(rowId + 2), myGame.getColumn(i).getSlot(rowId + 3)))//check all 3 for matching colour
-                        {
-                            return i;
-                        }
+                        return i;
                     }
-                    //horizontal
-                    //3 to the left
-                    if(i > 2)
+                    else if (getSlotsToCheck(playerRed, i, nextSlot, "Horizontal"))//check for winning move on horizontal axis
                     {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 3).getSlot(rowId), myGame.getColumn(i - 2).getSlot(rowId), myGame.getColumn(i - 1).getSlot(rowId)))
-                        {
-                            return i;
-                        }
+                        return i;
                     }
-                    //2 to the left and 1 right
-                    if(i > 1 && i < gridColumns - 1)
+                    else if (getSlotsToCheck(playerRed, i, nextSlot, "Diagonal Left"))//check for winning move on diagonal left axis
                     {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 2).getSlot(rowId), myGame.getColumn(i - 1).getSlot(rowId), myGame.getColumn(i + 1).getSlot(rowId)))
-                        {
-                            return i;
-                        }
+                        return i;
                     }
-                    //1 to the left and 2 right
-                    if(i > 0 && i < gridColumns - 2)
+                    else if (getSlotsToCheck(playerRed, i, nextSlot, "Diagonal Right"))//check for winning move on diagonal right axis
                     {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 1).getSlot(rowId), myGame.getColumn(i + 1).getSlot(rowId), myGame.getColumn(i + 2).getSlot(rowId)))
-                        {
-                            return i;
-                        }
-                    }
-                    //3 to the right
-                    if(i < gridColumns - 3)//is there 3 columns to the right
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i + 1).getSlot(rowId), myGame.getColumn(i + 2).getSlot(rowId), myGame.getColumn(i + 3).getSlot(rowId)))
-                        {
-                            return i;
-                        }
-                    }
-                    //diagonal left to right
-                    //3 left and 3 up
-                    if(rowId > 2 && i > 2)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 3).getSlot(rowId - 3), myGame.getColumn(i - 2).getSlot(rowId - 2), myGame.getColumn(i - 1).getSlot(rowId - 1)))
-                        {
-                            return i;
-                        }
-                    }
-                    //2 left and up + 1 right and down
-                    if(rowId > 1 && i > 1 && rowId < gridRows -1 && i < gridColumns - 1)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 2).getSlot(rowId - 2), myGame.getColumn(i - 1).getSlot(rowId - 1), myGame.getColumn(i + 1).getSlot(rowId + 1)))
-                        {
-                            return i;
-                        }
-                    }
-                    //1 up and left + 2 down and right
-                    if(rowId > 0 && i > 0 && rowId < gridRows -2 && i < gridColumns -2)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 1).getSlot(rowId - 1), myGame.getColumn(i + 1).getSlot(rowId + 1), myGame.getColumn(i + 2).getSlot(rowId + 2)))
-                        {
-                            return i;
-                        }
-                    }
-                    //3 right and 3 below for down right x 3
-                    if(rowId < gridRows -3 && i < gridColumns -3)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i + 1).getSlot(rowId + 1), myGame.getColumn(i + 2).getSlot(rowId + 2), myGame.getColumn(i + 3).getSlot(rowId + 3)))
-                        {
-                            return i;
-                        }
-                    }
-                    //diagional right to left
-                    //3 right and 3 up
-                    if(rowId > 2 && i < gridColumns - 3)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i + 1).getSlot(rowId - 1), myGame.getColumn(i + 2).getSlot(rowId - 2), myGame.getColumn(i + 3).getSlot(rowId - 3)))
-                        {
-                            return i;
-                        }
-                    }
-                    //2 right and up + 1 left and down
-                    if(rowId > 1 && i < gridColumns - 2 && rowId < gridRows - 1 && i > 0)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 1).getSlot(rowId + 1), myGame.getColumn(i + 1).getSlot(rowId - 1), myGame.getColumn(i + 2).getSlot(rowId - 2)))
-                        {
-                            return i;
-                        }
-                    }
-                    //1 right and up + 2 left and down
-                    if(rowId > 2 && i < gridColumns - 1 && rowId < gridRows - 2 && i > 1)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 2).getSlot(rowId + 2), myGame.getColumn(i - 1).getSlot(rowId + 1), myGame.getColumn(i + 1).getSlot(rowId - 1)))
-                        {
-                            return i;
-                        }
-                    }
-                    //3 left and down
-                    if(rowId < gridRows - 3 && i > 2)
-                    {
-                        if(checkForMatch(bolRed, myGame.getColumn(i - 3).getSlot(rowId + 3), myGame.getColumn(i - 2).getSlot(rowId + 2), myGame.getColumn(i - 1).getSlot(rowId + 1)))
-                        {
-                            return i;
-                        }
+                        return i;
                     }
                 }
             }
