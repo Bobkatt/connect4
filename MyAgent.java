@@ -125,14 +125,7 @@ public class MyAgent extends Agent
      */
     public boolean allThreeMatch(boolean checkColour, Connect4Slot slot1, Connect4Slot slot2, Connect4Slot slot3)
     {
-        if(slot1.getIsFilled() && slot2.getIsFilled() && slot3.getIsFilled())//check to see if all 3 slots are currently occupied 
-        {
-            if(slot1.getIsRed()==checkColour && slot2.getIsRed()==checkColour && slot3.getIsRed()==checkColour)//compare each selected slot with selected colout for match 
-            {
-                return true;
-            }
-        }
-        return false;
+        return(slot1.getIsFilled() && slot2.getIsFilled() && slot3.getIsFilled() && slot1.getIsRed()==checkColour && slot2.getIsRed()==checkColour && slot3.getIsRed()==checkColour);
     }
     
     /**
@@ -144,7 +137,7 @@ public class MyAgent extends Agent
      * @param direction String which direction to check for winning combination
      * @return true if winning combination is found otherwise will return false
      */
-    public boolean getSlotsToCheck(boolean checkColour, int startColumn, int startRow, String direction)
+    public boolean checkForWin(boolean checkColour, int startColumn, int startRow, String direction)
     {
         int gridRows = myGame.getRowCount();
         int gridColumns = myGame.getColumnCount();
@@ -158,12 +151,12 @@ public class MyAgent extends Agent
             while (startLocation < 0 && okToCheck)
             {
                 int offset = startLocation + positionCounter;
+                int checkColumn = 0;
+                int checkRow = 0;
                 if (offset > -1)//skip startSlot Position
                 {
                     offset += 1;
                 }
-                int checkColumn = 0;
-                int checkRow = 0;
                 switch(direction)//based on direction, get next slot position
                 {
                     case "Diagonal Left"://alter row and column
@@ -194,7 +187,7 @@ public class MyAgent extends Agent
                 }
                 startLocation++;
             }
-            if(okToCheck && !isAWinner)
+            if(okToCheck)
             {
                 isAWinner = allThreeMatch(checkColour, myGame.getColumn(slotPairs[0][0]).getSlot(slotPairs[0][1]), myGame.getColumn(slotPairs[1][0]).getSlot(slotPairs[1][1]), myGame.getColumn(slotPairs[2][0]).getSlot(slotPairs[2][1]));
             }
@@ -221,19 +214,19 @@ public class MyAgent extends Agent
                 int nextSlot = getLowestEmptyIndex(column);//get next move on current column
                 if (nextSlot >= 0)
                 {
-                    if(getSlotsToCheck(playerRed, i, nextSlot, "Vertical"))//check for winning move on vertical axis 
+                    if(checkForWin(playerRed, i, nextSlot, "Vertical"))//check for winning move on vertical axis 
                     {
                         return i;
                     }
-                    else if (getSlotsToCheck(playerRed, i, nextSlot, "Horizontal"))//check for winning move on horizontal axis
+                    else if (checkForWin(playerRed, i, nextSlot, "Horizontal"))//check for winning move on horizontal axis
                     {
                         return i;
                     }
-                    else if (getSlotsToCheck(playerRed, i, nextSlot, "Diagonal Left"))//check for winning move on diagonal left axis
+                    else if (checkForWin(playerRed, i, nextSlot, "Diagonal Left"))//check for winning move on diagonal left axis
                     {
                         return i;
                     }
-                    else if (getSlotsToCheck(playerRed, i, nextSlot, "Diagonal Right"))//check for winning move on diagonal right axis
+                    else if (checkForWin(playerRed, i, nextSlot, "Diagonal Right"))//check for winning move on diagonal right axis
                     {
                         return i;
                     }
